@@ -1,14 +1,6 @@
 name: Release
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        type: choice
-        description: 'Tag'
-        required: true
-        options:
-          - latest
-          - beta
 
 jobs:
   build-publish:
@@ -43,6 +35,6 @@ jobs:
 
       - name: Publish
         run: |
-          npm publish --tag ${{ github.event.inputs.tag }} --access public
+          npm publish --tag latest --access public
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

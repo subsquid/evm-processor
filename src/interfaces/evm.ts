@@ -29,9 +29,9 @@ export interface EvmTransaction {
     nonce: bigint
     to?: string
     index: number
-    value: string
-    kind: bigint
-    chainId: bigint
+    value: bigint
+    type: number
+    chainId: number
     v: bigint
     r: string
     s: string
@@ -44,6 +44,5 @@ export interface EvmLog {
     index: number
     removed: boolean
     topics: string[]
-    transaction: EvmTransaction
     transactionIndex: number
 }

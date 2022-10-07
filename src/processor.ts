@@ -6,7 +6,7 @@ import {Batch, mergeBatches, applyRangeBound, getBlocksCount} from './batch/gene
 import {PlainBatchRequest, BatchRequest} from './batch/request'
 import {Chain} from './chain'
 import {BlockData, Ingest} from './ingest'
-import {LogOptions} from './interfaces/dataHandlers'
+import {BatchHandlerContext, LogOptions} from './interfaces/dataHandlers'
 import {
     LogItem,
     TransactionItem,
@@ -17,7 +17,6 @@ import {
     MayBeDataSelection,
 } from './interfaces/dataSelection'
 import {Database} from './interfaces/db'
-import {EvmBlock} from './interfaces/evm'
 import {Metrics} from './metrics'
 import {withErrorContext, timeInterval} from './util/misc'
 import {Range} from './util/range'
@@ -46,32 +45,6 @@ export interface DataSource {
 export type BatchProcessorItem<T> = T extends EvmBatchProcessor<infer I> ? I : never
 export type BatchProcessorLogItem<T> = Extract<BatchProcessorItem<T>, {kind: 'event'}>
 export type BatchProcessorTransactionItem<T> = Extract<BatchProcessorItem<T>, {kind: 'transaction'}>
-
-export interface BatchContext<Store, Item> {
-    /**
-     * Not yet public description of chain metadata
-     * @internal
-     */
-    _chain: Chain
-    log: Logger
-    store: Store
-    blocks: BatchBlock<Item>[]
-}
-
-export interface BatchBlock<Item> {
-    /**
-     * Block header
-     */
-    header: EvmBlock
-    /**
-     * A unified log of events and calls.
-     *
-     * All events deposited within a call are placed
-     * before the call. All child calls are placed before the parent call.
-     * List of block events is a subsequence of unified log.
-     */
-    items: Item[]
-}
 
 /**
  * Provides methods to configure and launch data processing.
@@ -148,12 +121,6 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
         return this
     }
 
-    setBatchSize(size: number): this {
-        this.assertNotRunning()
-        this.options.batchSize = size
-        return this
-    }
-
     /**
      * Sets blockchain data source.
      *
@@ -164,6 +131,12 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
      * })
      */
     setDataSource(src: DataSource): this {
+        this.assertNotRunning()
+        this.src = src
+        return this
+    }
+
+    setDataBase(src: DataSource): this {
         this.assertNotRunning()
         this.src = src
         return this
@@ -208,7 +181,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
      *
      * @param handler - The data handler, see {@link BatchContext} for an API available to the handler.
      */
-    run<Store>(db: Database<Store>, handler: (ctx: BatchContext<Store, Item>) => Promise<void>): void {
+    run<Store>(db: Database<Store>, handler: (ctx: BatchHandlerContext<Store, Item>) => Promise<void>): void {
         this.running = true
         runProgram(
             async () => {
@@ -242,8 +215,8 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
 
                 this.metrics.updateProgress(
                     await ingest.fetchArchiveHeight(),
-                    getBlocksCount(this.wholeRange(), 0, ingest.getLatestKnownArchiveHeight()),
-                    getBlocksCount(this.wholeRange(), heightAtStart + 1, ingest.getLatestKnownArchiveHeight())
+                    getBlocksCount(this.wholeRange(), 0, await ingest.getLatestKnownArchiveHeight()),
+                    getBlocksCount(this.wholeRange(), heightAtStart + 1, await ingest.getLatestKnownArchiveHeight())
                 )
 
                 let prometheusServer = await this.metrics.serve(this.getPrometheusPort())
@@ -264,7 +237,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
         let id = this.getId()
 
         class ProcessorArchiveClient extends ArchiveClient {
-            constructor(){
+            constructor() {
                 super({
                     url,
                     id,
@@ -280,7 +253,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
                             },
                             'retry'
                         )
-                    }
+                    },
                 })
             }
 
@@ -397,13 +370,13 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     private async process(
         db: Database<any>,
         ingest: Ingest<BatchRequest>,
-        handler: (ctx: BatchContext<any, Item>) => Promise<void>
+        handler: (ctx: BatchHandlerContext<any, Item>) => Promise<void>
     ): Promise<void> {
         for await (let batch of ingest.getBlocks()) {
             let log = this.getLogger()
             let mappingStartTime = process.hrtime.bigint()
             let blocks = batch.blocks
-            
+
             if (batch.blocks.length != 0) {
                 let from = Number(blocks[0].header.height)
                 let to = Number(last(blocks).header.height)
@@ -484,4 +457,8 @@ function randomString(len: number) {
     return result
 }
 
-type NormalizeAddress<T extends string | ReadonlyArray<string>> = Lowercase<T extends ReadonlyArray<infer R> ? R : T>
+type NormalizeAddress<T extends string | ReadonlyArray<string>> = T extends ReadonlyArray<infer R>
+    ? never extends R
+        ? '*'
+        : R
+    : T

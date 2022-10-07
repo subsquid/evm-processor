@@ -1,5 +1,5 @@
 import {EvmTopicSet} from '../interfaces/dataHandlers'
-import {LogDataRequest, LogRequest, TransactionDataRequest} from '../interfaces/dataSelection'
+import {LogDataRequest, TransactionDataRequest} from '../interfaces/dataSelection'
 
 type LogReq = {
     address: string[] | null

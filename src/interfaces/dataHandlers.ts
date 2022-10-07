@@ -1,7 +1,7 @@
 import {Logger} from '@subsquid/logger'
 import {Chain} from '../chain'
 import {Range} from '../util/range'
-import {LogData, LogDataRequest, LogItem, LogRequest} from './dataSelection'
+import {LogData, LogDataRequest, LogRequest, TransactionData, TransactionDataRequest} from './dataSelection'
 import {EvmBlock} from './evm'
 
 export interface CommonHandlerContext<S> {
@@ -18,50 +18,35 @@ export interface CommonHandlerContext<S> {
     log: Logger
 
     store: S
+}
+
+export interface BlockHandlerContext<S> {
+    /**
+     * Not yet public description of chain metadata
+     * @internal
+     */
+    _chain: Chain
+
+    /**
+     * A built-in logger to be used in mapping handlers. Supports trace, debug, warn, error, fatal
+     * levels.
+     */
+    log: Logger
+
+    store: S
     block: EvmBlock
 }
 
-type BlockLogsRequest = {
-    [name in string]: {evmLog: LogRequest}
+export type LogHandlerContext<S, R extends LogDataRequest = {evmLog: {}}> = BlockHandlerContext<S> & LogData<R>
+
+export interface LogHandler<S, R extends LogDataRequest = {evmLog: {}}> {
+    (ctx: LogHandlerContext<S, R>): Promise<void>
 }
 
-type BlockLogItem<R extends BlockLogsRequest> = ['*'] extends [keyof R]
-    ? [keyof R] extends ['*']
-        ? LogItem<string, R['*']>
-        : {[A in keyof R]: LogItem<A, R[A]>}[keyof R]
-    : {[A in keyof R]: LogItem<A, R[A]>}[keyof R] | LogItem<'*'>
-
-interface BlockItemRequest {
-    logs?: boolean | BlockLogsRequest
-}
-
-type BlockItem<R> = R extends true
-    ? LogItem<true>
-    : R extends BlockItemRequest
-    ? LogItem<R['logs']>
-    : BlockLogItem<{}>
-
-export interface BlockHandlerDataRequest {
-    includeAllBlocks?: boolean
-    items?: boolean | BlockItemRequest
-}
-
-export type BlockHandlerContext<S, R extends BlockHandlerDataRequest = {}> = CommonHandlerContext<S> & {
-    /**
-     * A unified log of events and calls.
-     *
-     * All events deposited within a call are placed
-     * before the call. All child calls are placed before the parent call.
-     * List of block events is a subsequence of unified log.
-     */
-    items: BlockItem<R['items']>[]
-}
-
-export interface BlockHandler<S, R extends BlockHandlerDataRequest = {}> {
-    (ctx: BlockHandlerContext<S, R>): Promise<void>
-}
-
-export type LogHandlerContext<S, R extends LogDataRequest = {evmLog: {}}> = CommonHandlerContext<S> & LogData<R>
+export type TransactionHandlerContext<
+    S,
+    R extends TransactionDataRequest = {transaction: {}}
+> = BlockHandlerContext<S> & TransactionData<R>
 
 export interface LogHandler<S, R extends LogDataRequest = {evmLog: {}}> {
     (ctx: LogHandlerContext<S, R>): Promise<void>
@@ -79,3 +64,22 @@ export interface LogOptions extends BlockRangeOption {
 }
 
 export type EvmTopicSet = string[][]
+
+export interface BatchHandlerContext<Store, Item> extends CommonHandlerContext<Store> {
+    blocks: BatchBlock<Item>[]
+}
+
+export interface BatchBlock<Item> {
+    /**
+     * Block header
+     */
+    header: EvmBlock
+    /**
+     * A unified log of events and calls.
+     *
+     * All events deposited within a call are placed
+     * before the call. All child calls are placed before the parent call.
+     * List of block events is a subsequence of unified log.
+     */
+    items: Item[]
+}

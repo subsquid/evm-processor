@@ -16,7 +16,8 @@ export interface StatusResponse {
 export interface BatchRequest {
     fromBlock: number
     toBlock?: number
-    logs?: LogRequest[]
+    logs: LogRequest[]
+    transactions: any[]
 }
 
 export interface LogRequest {
@@ -26,9 +27,9 @@ export interface LogRequest {
 }
 
 export interface FieldSelection {
-    block?: BlockFieldSelection
-    transaction?: TransactionFieldSelection
-    log?: LogFieldSelection
+    block?: BlockFieldSelection | null
+    transaction?: TransactionFieldSelection | null
+    log?: LogFieldSelection | null
 }
 
 export type BlockFieldSelection = {[P in keyof Block]?: true}
@@ -54,21 +55,21 @@ export interface Block {
     size: string
     gasLimit: string
     gasUsed: string
-    timestamp: number
+    timestamp: string
 }
 
 export interface Transaction {
-    source: string
+    from: string
     gas: string
     gasPrice: string
     hash: string
     input: string
     nonce: string
-    dest?: string
+    to?: string
     index: number
-    value: string
-    kind: string
-    chainId: string
+    value: bigint
+    type: number
+    chainId: number
     v: string
     r: string
     s: string

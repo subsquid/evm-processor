@@ -6,7 +6,7 @@ import * as gw from './interfaces/gateway'
 import {EvmBlock, EvmLog, EvmTransaction} from './interfaces/evm'
 import {addErrorContext, withErrorContext} from './util/misc'
 import {Range, rangeEnd} from './util/range'
-import {DEFAULT_REQUEST as _DEFAULT_REQUEST} from './interfaces/dataSelection'
+import {DEFAULT_REQUEST} from './interfaces/dataSelection'
 import {ArchiveClient, statusToHeight} from './archive'
 
 export type Item =
@@ -14,6 +14,7 @@ export type Item =
           kind: 'evmLog'
           address: string
           evmLog: EvmLog
+          transaction?: EvmTransaction
       }
     | {
           kind: 'transaction'
@@ -108,7 +109,7 @@ export class Ingest<R extends BatchRequest> {
                     if (response.nextBlock < rangeEnd(batch.range)) {
                         to = response.nextBlock - 1
                         this.batches[0] = {
-                            range: {from: to + 1, to: batch.range.to},
+                            range: {from: response.nextBlock, to: batch.range.to},
                             request: batch.request,
                         }
                     } else {
@@ -147,16 +148,20 @@ export class Ingest<R extends BatchRequest> {
 
         let req = batch.request
 
+        let logs = req.getLogs().map((l) => ({
+            address: l.address,
+            topics: l.topics || [],
+            fieldSelection: toGatewayFieldSelection(l.data),
+        }))
+
+        let transactions: any[] = []
+
         let args: gw.BatchRequest = {
             fromBlock: from,
             toBlock: to,
+            logs,
+            transactions,
         }
-
-        args.logs = req.getLogs().map((l) => ({
-            address: l.address,
-            topics: l.topics || [],
-            fieldSelection: toGatewayFieldSelection({}, {block: {}, ...l.data}, CONTEXT_NESTING_SHAPE),
-        }))
 
         return JSON.stringify(args)
     }
@@ -188,48 +193,22 @@ export class Ingest<R extends BatchRequest> {
     }
 }
 
-const CONTEXT_NESTING_SHAPE = (() => {
-    let transaction = {}
-    let block = {}
+function toGatewayFieldSelection(req: any | undefined): gw.FieldSelection {
     return {
-        evmLog: {
-            transaction,
-        },
-        transaction,
-        block,
+        block: DEFAULT_REQUEST.block,
+        log: req?.evmLog
+            ? {
+                  ...req.evmLog,
+                  ...DEFAULT_REQUEST.evmLog,
+              }
+            : undefined,
+        transaction: req?.transaction
+            ? {
+                  ...req.transaction,
+                  ...DEFAULT_REQUEST.transaction,
+              }
+            : undefined,
     }
-})()
-
-const REQUEST_TO_GATEWAY: Record<string, string> = {
-    block: 'block',
-    evmLog: 'log',
-    transaction: 'transaction',
-}
-
-const DEFAULT_REQUEST: Record<string, any> = _DEFAULT_REQUEST
-
-function toGatewayFieldSelection(
-    startSelection: gw.FieldSelection,
-    req: Record<string, any> | undefined,
-    shape: Record<string, any>,
-    subfield?: string
-): gw.FieldSelection {
-    let selection = startSelection as any
-    if (subfield && selection[subfield] == null) selection[subfield] = {}
-    for (let reqKey in req) {
-        if (shape[reqKey]) {
-            let selectKey = REQUEST_TO_GATEWAY[reqKey]
-            assert(typeof req[reqKey] === 'object')
-            if (selection[selectKey] == null) {
-                toGatewayFieldSelection(selection, DEFAULT_REQUEST[reqKey], shape[reqKey], selectKey)
-            }
-            toGatewayFieldSelection(selection, req[reqKey], shape[reqKey], selectKey)
-        } else {
-            let o = subfield ? selection[subfield] : selection
-            o[reqKey] = req[reqKey]
-        }
-    }
-    return selection
 }
 
 function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
@@ -245,33 +224,38 @@ function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
 
 function mapGatewayBlock(block: gw.BatchBlock): BlockData {
     let logs = createObjects<gw.Log, EvmLog>(block.logs, (go) => {
-        let log = go as any
-        return {
+        let log = go
+        let evmLog: PartialObj<EvmLog> = {
             id: createId(block.block.number, block.block.hash, log.index),
             ...log,
         }
+        return evmLog
     })
 
     let transactions = createObjects<gw.Transaction, EvmTransaction>(block.transactions, (go) => {
-        let {gas, gasPrice, ...transaction} = go as any
-        let o = {
-            id: createId(block.block.number, block.block.hash, transaction.index),
-            ...transaction,
+        let {gas, gasPrice, nonce, value, v, ...tx} = go
+        let transaction: PartialObj<EvmTransaction> = {
+            id: createId(block.block.number, block.block.hash, tx.index),
+            ...tx,
         }
-        gas != null && (o.gas = BigInt(gas))
-        gasPrice != null && (o.gasPrice = BigInt(gasPrice))
-        return o
+        gas && (transaction.gas = BigInt(gas))
+        gasPrice && (transaction.gasPrice = BigInt(gasPrice))
+        nonce && (transaction.nonce = BigInt(nonce))
+        value && (transaction.value = BigInt(value))
+        v && (transaction.v = BigInt(v))
+        return transaction
     })
 
     let items: Item[] = []
 
     for (let go of block.logs) {
         let evmLog = assertNotNull(logs.get(go.index)) as EvmLog
-        evmLog.transaction = transactions.get(go.transactionIndex) as EvmTransaction
+        let transaction = transactions.get(go.transactionIndex) as EvmTransaction
         items.push({
             kind: 'evmLog',
             address: evmLog.address,
             evmLog,
+            transaction,
         })
     }
 
@@ -279,24 +263,24 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
         let transaction = assertNotNull(transactions.get(go.index)) as EvmTransaction
         items.push({
             kind: 'transaction',
-            address: transaction.from,
+            address: transaction.to,
             transaction,
         })
     }
 
     items.sort((a, b) => {
         if (a.kind === 'evmLog' && b.kind === 'evmLog') {
-            return Number(a.evmLog.transactionIndex + a.evmLog.index - b.evmLog.transactionIndex - b.evmLog.index)
+            return a.evmLog.index - b.evmLog.index
         } else if (a.kind === 'transaction' && b.kind === 'transaction') {
-            return Number(a.transaction.index - b.transaction.index)
+            return a.transaction.index - b.transaction.index
         } else {
-            return Number(
-                a.kind === 'evmLog' && b.kind === 'transaction'
-                    ? a.evmLog.transactionIndex - b.transaction.index
-                    : a.kind === 'transaction' && b.kind === 'evmLog'
-                    ? a.transaction.index - b.evmLog.transactionIndex
-                    : 0
-            )
+            if (a.kind === 'evmLog' && b.kind === 'transaction') {
+                return a.evmLog.transactionIndex - b.transaction.index || -1
+            } else if (a.kind === 'transaction' && b.kind === 'evmLog') {
+                return a.transaction.index - b.evmLog.transactionIndex || 1
+            } else {
+                throw new Error('Unexpected case')
+            }
         }
     })
 
@@ -306,14 +290,14 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
         header: {
             id: `${height}-${block.block.hash.slice(3, 7)}`,
             height,
-            timestamp: timestamp * 1000,
+            timestamp: Number(timestamp) * 1000,
             nonce: BigInt(nonce),
             size: BigInt(size),
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),
             ...hdr,
         },
-        items: items,
+        items,
     }
 }
 
@@ -334,4 +318,4 @@ function createId(height: number, hash: string, index?: number) {
     }
 }
 
-type PartialObj<T> = Partial<T> & {index: bigint}
+type PartialObj<T> = Partial<T> & {index: number}

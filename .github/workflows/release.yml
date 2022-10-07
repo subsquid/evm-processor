@@ -23,7 +23,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@subsquid'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
       - name: Install dependencies
         run: |
@@ -34,7 +34,6 @@ jobs:
 
       - name: Publish
         run: |
-          npm whoami
           npm publish --tag latest --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

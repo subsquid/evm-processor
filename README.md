@@ -1,3 +1,3 @@
 # @subsquid/evm-processor
 
-Data fetcher and mappings executor for ethereum chains.
+Data fetcher and mappings executor for evm chains.

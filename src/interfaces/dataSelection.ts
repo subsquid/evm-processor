@@ -8,8 +8,8 @@ type PlainReq<T> = {
     [P in keyof T]?: true
 }
 
-type Select<T, R extends Req<T>> = {
-    [P in keyof T as R[P] extends true ? P : P extends 'id' ? P : never]: T[P]
+type Select<T, R extends Req<T>, K = false> = {
+    [P in keyof T as R[P] extends true ? P : P extends K ? P : never]: T[P]
 }
 
 export type WithProp<K extends string, V> = [V] extends [never]
@@ -18,66 +18,57 @@ export type WithProp<K extends string, V> = [V] extends [never]
           [k in K]: V
       }
 
-type LogScalars<T = EvmLog> = Omit<T, 'transaction'>
-
 export type TransactionRequest = Omit<PlainReq<EvmTransaction>, keyof TransactionDefaultRequest>
 
-export type LogRequest = Omit<PlainReq<LogScalars>, keyof LogDefaultRequest>
+export type LogRequest = Omit<PlainReq<EvmLog>, keyof LogDefaultRequest>
 
-type TransactionFields<R extends TransactionRequest> = Select<EvmTransaction, R & TransactionDefaultRequest>
+type TransactionFields<R extends TransactionRequest> = Select<EvmTransaction, R, keyof TransactionDefaultRequest>
 
-export type TransactionType<R, A = string> = (R extends true
+export type TransactionType<R> = R extends true
     ? EvmTransaction
     : R extends TransactionRequest
     ? TransactionFields<R>
-    : never) & {to: A}
+    : never
 
-// type ApplyTransactionFields<R extends LogRequest> = R['transaction'] extends true
-//     ? {transaction: EvmTransaction}
-//     : R['transaction'] extends TransactionRequest
-//     ? {transaction: TransactionFields<R['transaction']>}
-//     : {}
+type LogFields<R extends LogRequest> = Select<EvmLog, R, keyof LogDefaultRequest>
 
-type LogFields<R extends LogRequest> = Select<LogScalars, R & LogDefaultRequest> //& ApplyTransactionFields<R>
-
-type LogType<R, A = string> = (R extends LogRequest ? LogFields<R> : LogFields<{}>) & {address: A}
+type LogType<R> = R extends LogRequest ? LogFields<R> : LogFields<{}>
 
 export interface TransactionDataRequest {
+    transaction: TransactionRequest
+}
+
+export type TransactionData<R extends TransactionDataRequest = {transaction: {}}> = WithProp<
+    'transaction',
+    TransactionType<R['transaction']>
+>
+
+export interface LogDataRequest {
+    evmLog: LogRequest
     transaction?: TransactionRequest
 }
 
-export type TransactionData<R extends TransactionDataRequest = {transaction: {}}, A = string> = WithProp<
-    'transaction',
-    TransactionType<R['transaction'], A>
->
-
-export interface LogDataRequest extends TransactionDataRequest {
-    evmLog?: LogRequest
-}
-
-export type LogData<R extends LogDataRequest = {evmLog: {}}, A = string> = WithProp<'evmLog', LogType<R['evmLog'], A>> &
-    WithProp<'transaction', TransactionType<R['transaction'], A>>
-
-type SetAddress<T, A> = Omit<T, 'address'> & {address: A}
-type SetItemAddress<T, P, A> = P extends keyof T ? Omit<T, P> & {[p in P]: SetAddress<T[P], A>} & {address: A} : never
+export type LogData<R extends LogDataRequest = {evmLog: {}}> = WithProp<'evmLog', LogType<R['evmLog']>> &
+    WithProp<'transaction', TransactionType<R['transaction']>>
 
 type WithKind<K, T> = {kind: K} & {
     [P in keyof T]: T[P]
 }
 
-export type LogItem<Address, R extends LogDataRequest = {}> = WithKind<
-    'evmLog',
-    SetItemAddress<LogData<R, Address>, 'evmLog', Address>
->
+export type LogItem<R = false> = WithKind<'evmLog', R extends LogDataRequest ? LogData<R> : LogData<{evmLog: {}}>> & {
+    address: string
+}
 
-export type TransactionItem<Address, R extends TransactionDataRequest = {}> = WithKind<
+export type TransactionItem<R = false> = WithKind<
     'transaction',
-    SetItemAddress<TransactionData<R, Address>, 'transaction', Address>
->
+    R extends TransactionDataRequest ? TransactionData<R> : TransactionData<{transaction: {}}>
+> & {address: string}
 
 export type ItemMerge<A, B, R> = [A] extends [never]
     ? B
     : [B] extends [never]
+    ? A
+    : [Exclude<R, undefined | boolean>] extends [never]
     ? A
     : undefined extends A
     ? undefined | ObjectItemMerge<Exclude<A, undefined>, Exclude<B, undefined>, Exclude<R, undefined | boolean>>
@@ -97,12 +88,11 @@ type ObjectItemMerge<A, B, R> = {
 
 type ItemKind = {
     kind: string
-    address: string
 }
 
 type AddItem<T extends ItemKind, I extends ItemKind, R> =
-    | (T extends Pick<I, 'kind' | 'address'> ? ItemMerge<T, I, R> : T)
-    | Exclude<I, Pick<T, 'kind' | 'address'>>
+    | (T extends Pick<I, 'kind'> ? ItemMerge<T, I, R> : T)
+    | Exclude<I, Pick<T, 'kind'>>
 
 export type AddLogItem<T extends ItemKind, I extends ItemKind> = AddItem<T, I, LogDataRequest>
 export type AddTransactionItem<T extends ItemKind, I extends ItemKind> = AddItem<T, I, TransactionDataRequest>
@@ -121,7 +111,6 @@ export interface MayBeDataSelection<R> {
 
 export const DEFAULT_REQUEST = {
     block: {
-        id: true,
         number: true,
         hash: true,
         parentHash: true,
@@ -141,17 +130,15 @@ export const DEFAULT_REQUEST = {
         timestamp: true,
     },
     evmLog: {
-        id: true,
         address: true,
         index: true,
         transactionIndex: true,
     },
     transaction: {
-        id: true,
         to: true,
         index: true,
     },
 } as const
 
-type LogDefaultRequest = typeof DEFAULT_REQUEST.evmLog
-type TransactionDefaultRequest = typeof DEFAULT_REQUEST.transaction
+type LogDefaultRequest = typeof DEFAULT_REQUEST.evmLog & {id: true}
+type TransactionDefaultRequest = typeof DEFAULT_REQUEST.transaction & {id: true}

@@ -56,7 +56,7 @@ export type BatchProcessorTransactionItem<T> = Extract<BatchProcessorItem<T>, {k
  * both to database and chain nodes,
  * thus providing much better performance.
  */
-export class EvmBatchProcessor<Item extends {kind: string; address: string} = LogItem<'*'> | TransactionItem<'*'>> {
+export class EvmBatchProcessor<Item extends {kind: string; address: string} = LogItem | TransactionItem> {
     private batches: Batch<PlainBatchRequest>[] = []
     private options: any = {}
     private src?: DataSource
@@ -74,12 +74,12 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     addLog<A extends string | ReadonlyArray<string>>(
         contractAddress: A,
         options?: LogOptions & NoDataSelection
-    ): EvmBatchProcessor<AddLogItem<Item, LogItem<NormalizeAddress<A>, {}>>>
+    ): EvmBatchProcessor<AddLogItem<Item, LogItem>>
 
-    addLog<A extends string | ReadonlyArray<string>, R extends LogDataRequest>(
-        contractAddress: A,
+    addLog<R extends LogDataRequest>(
+        contractAddress: string | string[],
         options: LogOptions & DataSelection<R>
-    ): EvmBatchProcessor<AddLogItem<Item, LogItem<NormalizeAddress<A>, R>>>
+    ): EvmBatchProcessor<AddLogItem<Item, LogItem<R>>>
 
     addLog(
         contractAddress: string | string[],
@@ -456,9 +456,3 @@ function randomString(len: number) {
 
     return result
 }
-
-type NormalizeAddress<T extends string | ReadonlyArray<string>> = T extends ReadonlyArray<infer R>
-    ? never extends R
-        ? '*'
-        : R
-    : T

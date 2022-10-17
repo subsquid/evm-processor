@@ -1,0 +1,39 @@
+name: Bump
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: choice
+        description: 'Version'
+        required: true
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump:
+    name: Increase version numbers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.5.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Configure git
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+
+      - name: Install dependencies
+        run:  npm ci
+
+      - name: Bump version
+        run: npm version ${{ github.event.inputs.version }} -m "bump to %s"
+
+      - name: Git push
+        run: git push origin 

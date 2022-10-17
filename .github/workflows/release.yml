@@ -1,14 +1,6 @@
 name: Release
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        type: choice
-        description: Tag
-        required: true
-        options:
-          - beta
-          - latest
 
 jobs:
   build-publish:
@@ -23,33 +15,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Write npm credentials
-        run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_AUTH_TOKEN" >> .npmrc
-          npm whoami
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+          always-auth: true
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@subsquid'
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
 
-      - name: Get yarn cache directory path
-        id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Install dependencies
+        run: |
+          npm ci
 
-      - uses: actions/cache@v3
-        id: yarn-cache
-        env:
-          cache-name: subsquid-cli
-        with:
-          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-${{ env.cache-name }}-yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.cache-name }}-yarn-
-      - name: Install
-        run: yarn install
+      - name: Build  
+        run: npm run build      
 
-      - name: Build
-        run: yarn build
-
-      - name: Release
-        run: npm publish --tag ${{ github.event.inputs.tag }} --access public
+      - name: Publish
+        run: |
+          npm publish --tag latest --access public
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

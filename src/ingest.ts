@@ -4,10 +4,10 @@ import type {Batch} from './batch/generic'
 import {BatchRequest} from './batch/request'
 import * as gw from './interfaces/gateway'
 import {EvmBlock, EvmLog, EvmTransaction} from './interfaces/evm'
-import {addErrorContext, withErrorContext} from './util/misc'
+import {addErrorContext, statusToHeight, withErrorContext} from './util/misc'
 import {Range, rangeEnd} from './util/range'
 import {DEFAULT_REQUEST} from './interfaces/dataSelection'
-import {ArchiveClient, statusToHeight} from './archive'
+import {JSONClient} from './util/json'
 
 export type Item =
     | {
@@ -39,7 +39,7 @@ export interface DataBatch<R> {
 }
 
 export interface IngestOptions<R> {
-    archive: ArchiveClient
+    archive: JSONClient
     archivePollIntervalMS?: number
     batches: Batch<R>[]
 }
@@ -86,7 +86,11 @@ export class Ingest<R extends BatchRequest> {
                     ctx.archiveQuery = this.buildBatchQuery(batch, archiveHeight)
 
                     let fetchStartTime = process.hrtime.bigint()
-                    let response = await this.options.archive.query(ctx.archiveQuery)
+                    let response: gw.QueryResponse = await this.options.archive.request({
+                        path: '/query',
+                        query: ctx.archiveQuery,
+                        method: 'POST',
+                    })
                     let fetchEndTime = process.hrtime.bigint()
 
                     ctx.batchBlocksFetched = response.data.length
@@ -154,7 +158,11 @@ export class Ingest<R extends BatchRequest> {
             fieldSelection: toGatewayFieldSelection(l.data),
         }))
 
-        let transactions: any[] = []
+        let transactions = req.getTransactions().map((t) => ({
+            address: t.address,
+            sighash: t.sighash,
+            fieldSelection: toGatewayFieldSelection(t.data),
+        }))
 
         let args: gw.BatchRequest = {
             fromBlock: from,
@@ -179,8 +187,11 @@ export class Ingest<R extends BatchRequest> {
     }
 
     async fetchArchiveHeight(): Promise<number> {
-        let res = await this.options.archive.getHeight()
-        this.setArchiveHeight(res)
+        let res: gw.StatusResponse = await this.options.archive.request({
+            path: '/status',
+            method: 'GET',
+        })
+        this.setArchiveHeight(statusToHeight(res))
         return this.archiveHeight
     }
 
@@ -238,11 +249,11 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             id: createId(block.block.number, block.block.hash, tx.index),
             ...tx,
         }
-        gas && (transaction.gas = BigInt(gas))
-        gasPrice && (transaction.gasPrice = BigInt(gasPrice))
-        nonce && (transaction.nonce = BigInt(nonce))
-        value && (transaction.value = BigInt(value))
-        v && (transaction.v = BigInt(v))
+        if (gas != null) transaction.gas = BigInt(gas)
+        if (gasPrice != null) transaction.gasPrice = BigInt(gasPrice)
+        if (nonce != null) transaction.nonce = BigInt(nonce)
+        if (value != null) transaction.value = BigInt(value)
+        if (v != null) transaction.v = BigInt(v)
         return transaction
     })
 

@@ -43,3 +43,12 @@ export function withErrorContext(ctx: any): (err: Error) => never {
         throw addErrorContext(err, ctx)
     }
 }
+
+export function statusToHeight(status: StatusResponse) {
+    let height =
+        status.parquetBlockNumber > status.dbMinBlockNumber ? status.dbMaxBlockNumber : status.parquetBlockNumber
+    if (height == 0) {
+        height = -1
+    }
+    return height
+}

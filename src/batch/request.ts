@@ -7,17 +7,27 @@ type LogReq = {
     data?: LogDataRequest
 }
 
+type TransactionReq = {
+    address: string[] | null
+    sighash?: string
+    data?: TransactionDataRequest
+}
+
 export interface BatchRequest {
     getLogs(): LogReq[]
+    getTransactions(): TransactionReq[]
 }
 
 export class PlainBatchRequest implements BatchRequest {
     logs: LogReq[] = []
-    logsRequest?: LogDataRequest
-    transactionsRequest?: TransactionDataRequest
+    transactions: TransactionReq[] = []
 
     getLogs() {
         return this.logs
+    }
+
+    getTransactions() {
+        return this.transactions
     }
 
     merge(other: PlainBatchRequest): PlainBatchRequest {

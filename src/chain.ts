@@ -1,13 +1,9 @@
-import {ResilientRpcClient} from '@subsquid/rpc-client/lib/resilient'
-
-export interface ChainManagerOptions {
-    getChainClient: () => ResilientRpcClient
-}
+import {RpcClient} from './util/rpc'
 
 export class Chain {
-    constructor(private getClient: () => ResilientRpcClient) {}
+    constructor(private getClient: () => RpcClient) {}
 
-    get client(): ResilientRpcClient {
+    get client(): RpcClient {
         return this.getClient()
     }
 }

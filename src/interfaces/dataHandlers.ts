@@ -65,6 +65,10 @@ export interface LogOptions extends BlockRangeOption {
 
 export type EvmTopicSet = string[][]
 
+export interface TransactionOptions extends BlockRangeOption {
+    sighash?: string
+}
+
 export interface BatchHandlerContext<Store, Item> extends CommonHandlerContext<Store> {
     blocks: BatchBlock<Item>[]
 }

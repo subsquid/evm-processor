@@ -1,5 +1,3 @@
-import {StatusResponse} from '../interfaces/gateway'
-
 export function unique<T>(items: Iterable<T>): T[] {
     let set = new Set(items)
     return Array.from(set)
@@ -42,13 +40,4 @@ export function withErrorContext(ctx: any): (err: Error) => never {
     return function (err: Error): never {
         throw addErrorContext(err, ctx)
     }
-}
-
-export function statusToHeight(status: StatusResponse) {
-    let height =
-        status.parquetBlockNumber > status.dbMinBlockNumber ? status.dbMaxBlockNumber : status.parquetBlockNumber
-    if (height == 0) {
-        height = -1
-    }
-    return height
 }

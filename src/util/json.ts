@@ -1,7 +1,5 @@
 import assert from 'assert'
-import fetch, {FetchError, RequestInit} from 'node-fetch'
 import {isRetryableError, performFetch} from './fetch'
-import {QueryResponse, StatusResponse} from '../interfaces/gateway'
 import {URL} from 'url'
 
 export interface JSONClientOptions {
@@ -11,25 +9,6 @@ export interface JSONClientOptions {
 
 export class JSONClient {
     constructor(private options: JSONClientOptions) {}
-
-    // async query<T>(archiveQuery: string): Promise<QueryResponse> {
-    //     return await this.request({
-    //         url: this.options.url + '/query',
-    //         query: archiveQuery,
-    //         method: 'POST',
-    //     })
-    // }
-
-    // async getStatus(): Promise<StatusResponse> {
-    //     return await this.request({
-    //         url: this.options.url + '/status',
-    //         method: 'GET',
-    //     })
-    // }
-
-    // async getHeight(): Promise<number> {
-    //     return await this.getStatus().then(statusToHeight)
-    // }
 
     async request<T>(req: Request): Promise<T> {
         let url = new URL(req.path, this.options.url).toString()
@@ -78,12 +57,6 @@ export interface Request {
 export interface JSONError {
     message: string
     path?: (string | number)[]
-}
-
-export class ArchiveResponseError extends Error {
-    constructor(public readonly errors: JSONError[]) {
-        super(`Archive error: ${errors[0].message}`)
-    }
 }
 
 function wait(ms: number): Promise<void> {

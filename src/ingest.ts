@@ -4,7 +4,7 @@ import type {Batch} from './batch/generic'
 import {BatchRequest} from './batch/request'
 import * as gw from './interfaces/gateway'
 import {EvmBlock, EvmLog, EvmTransaction} from './interfaces/evm'
-import {addErrorContext, statusToHeight, withErrorContext} from './util/misc'
+import {addErrorContext, withErrorContext} from './util/misc'
 import {Range, rangeEnd} from './util/range'
 import {DEFAULT_REQUEST} from './interfaces/dataSelection'
 import {JSONClient} from './util/json'
@@ -95,8 +95,8 @@ export class Ingest<R extends BatchRequest> {
 
                     ctx.batchBlocksFetched = response.data.length
 
-                    assert(response.status.dbMaxBlockNumber >= archiveHeight)
-                    this.setArchiveHeight(statusToHeight(response.status))
+                    assert(response.archiveHeight >= archiveHeight)
+                    this.setArchiveHeight(archiveHeight)
 
                     let blocks = response.data
                         .flat()
@@ -109,15 +109,13 @@ export class Ingest<R extends BatchRequest> {
                     }
 
                     let from = batch.range.from
-                    let to: number
-                    if (response.nextBlock < rangeEnd(batch.range)) {
-                        to = response.nextBlock - 1
+                    let to = response.nextBlock - 1
+                    if (to < rangeEnd(batch.range)) {
                         this.batches[0] = {
-                            range: {from: response.nextBlock, to: batch.range.to},
+                            range: {from: to + 1, to: batch.range.to},
                             request: batch.request,
                         }
                     } else {
-                        to = assertNotNull(batch.range.to)
                         this.batches.shift()
                     }
 
@@ -187,11 +185,11 @@ export class Ingest<R extends BatchRequest> {
     }
 
     async fetchArchiveHeight(): Promise<number> {
-        let res: gw.StatusResponse = await this.options.archive.request({
-            path: '/status',
+        let res: {height: number} = await this.options.archive.request({
+            path: '/height',
             method: 'GET',
         })
-        this.setArchiveHeight(statusToHeight(res))
+        this.setArchiveHeight(res.height)
         return this.archiveHeight
     }
 

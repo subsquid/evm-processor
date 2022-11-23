@@ -300,7 +300,7 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             id: `${height}-${block.block.hash.slice(3, 7)}`,
             height,
             timestamp: Number(timestamp) * 1000,
-            nonce: BigInt(nonce),
+            nonce: nonce !== undefined && nonce !== null ? BigInt(nonce) : nonce,
             size: BigInt(size),
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),

@@ -1,6 +1,6 @@
 {
   "name": "@subsquid/evm-processor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Data fetcher and mappings executor for evm chains",
   "license": "GPL-3.0-or-later",
   "repository": "git@github.com:subsquid/squid.git",

@@ -89,6 +89,8 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     ): EvmBatchProcessor<any> {
         this.assertNotRunning()
         let req = new PlainBatchRequest()
+        if (!contractAddress || contractAddress === '*') 
+            contractAddress = []
         req.logs.push({
             address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
             topics: options?.filter,

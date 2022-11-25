@@ -364,6 +364,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
                     {
                         req: id,
                         responseTime: Math.round(Number(duration) / 1000_000),
+                        result,
                     },
                     'response'
                 )

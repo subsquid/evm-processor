@@ -128,6 +128,8 @@ export const DEFAULT_REQUEST = {
         gasLimit: true,
         gasUsed: true,
         timestamp: true,
+        mixHash: true,
+        baseFeePerGas: true
     },
     evmLog: {
         address: true,

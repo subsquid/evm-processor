@@ -232,19 +232,24 @@ function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
 }
 
 function mapGatewayBlock(block: gw.BatchBlock): BlockData {
+    
+    const blockHash = assertNotNull(block.block.hash, `Hash is null for block ${block.block.number}`)
+    
     let logs = createObjects<gw.Log, EvmLog>(block.logs, (go) => {
         let log = go
         let evmLog: PartialObj<EvmLog> = {
-            id: createId(block.block.number, block.block.hash, log.index),
+            id: createId(block.block.number, blockHash, log.index),
             ...log,
         }
         return evmLog
     })
 
     let transactions = createObjects<gw.Transaction, EvmTransaction>(block.transactions, (go) => {
-        let {gas, gasPrice, nonce, value, v, ...tx} = go
+        let {gas, gasPrice, nonce, value, v, maxPriorityFeePerGas, maxFeePerGas, ...tx} = go
         let transaction: PartialObj<EvmTransaction> = {
-            id: createId(block.block.number, block.block.hash, tx.index),
+            id: createId(block.block.number, blockHash, tx.index),
+            maxFeePerGas: maxFeePerGas ? BigInt(maxFeePerGas) : undefined,
+            maxPriorityFeePerGas: maxPriorityFeePerGas ? BigInt(maxPriorityFeePerGas) : undefined,
             ...tx,
         }
         if (gas != null) transaction.gas = BigInt(gas)
@@ -293,17 +298,19 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
         }
     })
 
-    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, ...hdr} = block.block
-
+    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, baseFeePerGas, ...hdr} = block.block
+    
     return {
         header: {
-            id: `${height}-${block.block.hash.slice(3, 7)}`,
+            id: `${height}-${blockHash.slice(3, 7)}`,
             height,
             timestamp: Number(timestamp) * 1000,
-            nonce: nonce ? BigInt(nonce) : -1n,
+            nonce: nonce ? BigInt(nonce) : undefined,
             size: BigInt(size),
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),
+            baseFeePerGas: baseFeePerGas? BigInt(baseFeePerGas): undefined,
+            hash: blockHash,
             ...hdr,
         },
         items,

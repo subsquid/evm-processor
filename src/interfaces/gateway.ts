@@ -34,28 +34,30 @@ export type TransactionFieldSelection = {[P in keyof Transaction]?: true}
 
 export interface Block {
     number: number
-    hash: string
+    hash?: string
     parentHash: string
-    nonce: string
+    nonce?: string
     sha3Uncles: string
     logsBloom: string
     transactionsRoot: string
     stateRoot: string
     receiptsRoot: string
     miner: string
-    difficulty: string
-    totalDifficulty: string
+    difficulty?: string
+    totalDifficulty?: string
     extraData: string
     size: string
     gasLimit: string
     gasUsed: string
     timestamp: string
+    mixHash?: string
+    baseFeePerGas?: string
 }
 
 export interface Transaction {
-    from: string
+    from?: string
     gas: string
-    gasPrice: string
+    gasPrice?: string
     hash: string
     input: string
     nonce: string
@@ -63,10 +65,13 @@ export interface Transaction {
     index: number
     value: bigint
     type: number
-    chainId: number
+    chainId?: number
     v: string
     r: string
     s: string
+    maxPriorityFeePerGas?: string
+    maxFeePerGas?: string
+    yParity?: number
 }
 
 export interface Log {
@@ -76,6 +81,7 @@ export interface Log {
     removed: boolean
     topics: string[]
     transactionIndex: number
+    transactionHash: string
 }
 
 export interface BatchBlock {
@@ -103,6 +109,8 @@ export const FULL_SELECTION = {
         gasLimit: true,
         gasUsed: true,
         timestamp: true,
+        mixHash: true,
+        baseFeePerGas: true
     },
     log: {
         address: true,
@@ -127,5 +135,8 @@ export const FULL_SELECTION = {
         v: true,
         r: true,
         s: true,
+        maxPriorityFeePerGas: true,
+        maxFeePerGas: true,
+        yParity: true,
     },
 }

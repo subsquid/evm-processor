@@ -3,27 +3,29 @@ export interface EvmBlock {
     height: number
     hash: string
     parentHash: string
-    nonce: bigint
+    nonce?: bigint
     sha3Uncles: string
     logsBloom: string
     transactionsRoot: string
     stateRoot: string
     receiptsRoot: string
     miner: string
-    difficulty: string
-    totalDifficulty: string
+    difficulty?: string
+    totalDifficulty?: string
     extraData: string
     size: bigint
     gasLimit: bigint
     gasUsed: bigint
     timestamp: number
+    mixHash?: string
+    baseFeePerGas?: bigint
 }
 
 export interface EvmTransaction {
     id: string
-    from: string
+    from?: string
     gas: bigint
-    gasPrice: bigint
+    gasPrice?: bigint
     hash: string
     input: string
     nonce: bigint
@@ -31,10 +33,13 @@ export interface EvmTransaction {
     index: number
     value: bigint
     type: number
-    chainId: number
+    chainId?: number
     v: bigint
     r: string
     s: string
+    maxPriorityFeePerGas?: bigint
+    maxFeePerGas?: bigint
+    yParity?: number
 }
 
 export interface EvmLog {

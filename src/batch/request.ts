@@ -33,6 +33,7 @@ export class PlainBatchRequest implements BatchRequest {
     merge(other: PlainBatchRequest): PlainBatchRequest {
         let result = new PlainBatchRequest()
         result.logs = this.logs.concat(other.logs)
+        result.transactions = this.transactions.concat(other.transactions)
         return result
     }
 }

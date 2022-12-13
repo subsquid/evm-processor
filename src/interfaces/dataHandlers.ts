@@ -1,7 +1,7 @@
 import {Logger} from '@subsquid/logger'
 import {Chain} from '../chain'
 import {Range} from '../util/range'
-import {LogData, LogDataRequest, LogRequest, TransactionData, TransactionDataRequest} from './dataSelection'
+import {LogData, LogDataRequest, TransactionData, TransactionDataRequest} from './dataSelection'
 import {EvmBlock} from './evm'
 
 export interface CommonHandlerContext<S> {

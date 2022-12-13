@@ -45,7 +45,7 @@ export interface DataSource {
  * type BlockItem = BatchProcessorItem<typeof processor>
  */
 export type BatchProcessorItem<T> = T extends EvmBatchProcessor<infer I> ? I : never
-export type BatchProcessorLogItem<T> = Extract<BatchProcessorItem<T>, {kind: 'event'}>
+export type BatchProcessorLogItem<T> = Extract<BatchProcessorItem<T>, {kind: 'evmLog'}>
 export type BatchProcessorTransactionItem<T> = Extract<BatchProcessorItem<T>, {kind: 'transaction'}>
 
 /**

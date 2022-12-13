@@ -58,6 +58,18 @@ new EvmBatchProcessor()
             evmLog: {},
         } as const,
     })
+    .addTransaction('0xaa', {
+        sighash: ['a', 'b'],
+        data: {
+            transaction: {},
+        } as const,
+    })
+    .addTransaction('0xaa', {
+        sighash: 'a',
+        data: {
+            transaction: {},
+        } as const,
+    })
     .run(
         db,
         getItem((item) => {

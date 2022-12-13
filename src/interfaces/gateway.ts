@@ -11,12 +11,18 @@ export interface BatchRequest {
     fromBlock: number
     toBlock?: number
     logs: LogRequest[]
-    transactions: any[]
+    transactions: TransactionRequest[]
 }
 
 export interface LogRequest {
     address: string[] | null
     topics: EvmTopicSet
+    fieldSelection: FieldSelection
+}
+
+export interface TransactionRequest {
+    address: string[] | null
+    sighash?: string
     fieldSelection: FieldSelection
 }
 

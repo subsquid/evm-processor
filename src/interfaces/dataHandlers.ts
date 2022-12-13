@@ -66,7 +66,7 @@ export interface LogOptions extends BlockRangeOption {
 export type EvmTopicSet = string[][]
 
 export interface TransactionOptions extends BlockRangeOption {
-    sighash?: string
+    sighash?: string | string[]
 }
 
 export interface BatchHandlerContext<Store, Item> extends CommonHandlerContext<Store> {

@@ -89,8 +89,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     ): EvmBatchProcessor<any> {
         this.assertNotRunning()
         let req = new PlainBatchRequest()
-        if (!contractAddress || contractAddress === '*') 
-            contractAddress = []
+        if (!contractAddress || contractAddress === '*') contractAddress = []
         req.logs.push({
             address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
             topics: options?.filter,
@@ -116,11 +115,21 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     ): EvmBatchProcessor<any> {
         this.assertNotRunning()
         let req = new PlainBatchRequest()
-        req.transactions.push({
-            address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
-            sighash: options?.sighash,
-            data: options?.data,
-        })
+        if (Array.isArray(options?.sighash)) {
+            req.transactions.push(
+                ...options!.sighash.map((sighash) => ({
+                    address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
+                    sighash: sighash,
+                    data: options?.data,
+                }))
+            )
+        } else {
+            req.transactions.push({
+                address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
+                sighash: options?.sighash,
+                data: options?.data,
+            })
+        }
         this.add(req, options?.range)
         return this
     }

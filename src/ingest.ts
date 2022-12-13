@@ -232,13 +232,13 @@ function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
 }
 
 function mapGatewayBlock(block: gw.BatchBlock): BlockData {
-    
-    const blockHash = assertNotNull(block.block.hash, `Hash is null for block ${block.block.number}`)
-    
+    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, baseFeePerGas, hash: maybeHash, ...hdr} = block.block
+    let hash = assertNotNull(maybeHash)
+
     let logs = createObjects<gw.Log, EvmLog>(block.logs, (go) => {
         let log = go
         let evmLog: PartialObj<EvmLog> = {
-            id: createId(block.block.number, blockHash, log.index),
+            id: createId(block.block.number, hash, log.index),
             ...log,
         }
         return evmLog
@@ -247,7 +247,7 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
     let transactions = createObjects<gw.Transaction, EvmTransaction>(block.transactions, (go) => {
         let {gas, gasPrice, nonce, value, v, maxPriorityFeePerGas, maxFeePerGas, ...tx} = go
         let transaction: PartialObj<EvmTransaction> = {
-            id: createId(block.block.number, blockHash, tx.index),
+            id: createId(block.block.number, hash, tx.index),
             maxFeePerGas: maxFeePerGas ? BigInt(maxFeePerGas) : undefined,
             maxPriorityFeePerGas: maxPriorityFeePerGas ? BigInt(maxPriorityFeePerGas) : undefined,
             ...tx,
@@ -298,11 +298,11 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
         }
     })
 
-    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, baseFeePerGas, ...hdr} = block.block
     
     return {
         header: {
-            id: `${height}-${blockHash.slice(3, 7)}`,
+            id: `${height}-${hash.slice(3, 7)}`,
+            hash,
             height,
             timestamp: Number(timestamp) * 1000,
             nonce: nonce ? BigInt(nonce) : undefined,
@@ -310,7 +310,6 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),
             baseFeePerGas: baseFeePerGas? BigInt(baseFeePerGas): undefined,
-            hash: blockHash,
             ...hdr,
         },
         items,

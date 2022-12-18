@@ -115,21 +115,11 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     ): EvmBatchProcessor<any> {
         this.assertNotRunning()
         let req = new PlainBatchRequest()
-        if (Array.isArray(options?.sighash)) {
-            req.transactions.push(
-                ...options!.sighash.map((sighash) => ({
-                    address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
-                    sighash: sighash,
-                    data: options?.data,
-                }))
-            )
-        } else {
-            req.transactions.push({
-                address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
-                sighash: options?.sighash,
-                data: options?.data,
-            })
-        }
+        req.transactions.push({
+            address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
+            sighash: options?.sighash == null || Array.isArray(options?.sighash) ? options?.sighash : [options.sighash],
+            data: options?.data,
+        })
         this.add(req, options?.range)
         return this
     }

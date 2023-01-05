@@ -31,14 +31,6 @@
     "prom-client": "^14.0.1",
     "node-fetch": "^2.6.7"
   },
-  "peerDependencies": {
-    "@subsquid/typeorm-store": "^0.1.2"
-  },
-  "peerDependenciesMeta": {
-    "@subsquid/typeorm-store": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@types/mocha": "^9.1.1",
     "@types/node": "^16.11.41",

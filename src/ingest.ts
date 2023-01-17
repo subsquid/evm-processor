@@ -232,17 +232,7 @@ function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
 }
 
 function mapGatewayBlock(block: gw.BatchBlock): BlockData {
-    let {
-        timestamp,
-        number: height,
-        nonce,
-        size,
-        gasLimit,
-        gasUsed,
-        baseFeePerGas,
-        hash: maybeHash,
-        ...hdr
-    } = block.block
+    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, baseFeePerGas, hash: maybeHash, ...hdr} = block.block
     let hash = assertNotNull(maybeHash)
 
     let logs = createObjects<gw.Log, EvmLog>(block.logs, (go) => {
@@ -297,15 +287,18 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             return a.evmLog.index - b.evmLog.index
         } else if (a.kind === 'transaction' && b.kind === 'transaction') {
             return a.transaction.index - b.transaction.index
-        } else if (a.kind === 'evmLog' && b.kind === 'transaction') {
-            return a.evmLog.transactionIndex - b.transaction.index || -1
-        } else if (a.kind === 'transaction' && b.kind === 'evmLog') {
-            return a.transaction.index - b.evmLog.transactionIndex || 1
         } else {
-            throw new Error('Unexpected case')
+            if (a.kind === 'evmLog' && b.kind === 'transaction') {
+                return a.evmLog.transactionIndex - b.transaction.index || -1
+            } else if (a.kind === 'transaction' && b.kind === 'evmLog') {
+                return a.transaction.index - b.evmLog.transactionIndex || 1
+            } else {
+                throw new Error('Unexpected case')
+            }
         }
     })
 
+    
     return {
         header: {
             id: `${height}-${hash.slice(3, 7)}`,
@@ -316,7 +309,7 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             size: BigInt(size),
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),
-            baseFeePerGas: baseFeePerGas ? BigInt(baseFeePerGas) : undefined,
+            baseFeePerGas: baseFeePerGas? BigInt(baseFeePerGas): undefined,
             ...hdr,
         },
         items,

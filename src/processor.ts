@@ -138,6 +138,22 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
     }
 
     /**
+     * By default, the processor will fetch only blocks
+     * which contain requested items. This method
+     * modifies such behaviour to fetch all chain blocks.
+     *
+     * Optionally a range of blocks can be specified
+     * for which the setting should be effective.
+     */
+    includeAllBlocks(range?: Range): this {
+        this.assertNotRunning()
+        let req = new PlainBatchRequest()
+        req.includeAllBlocks = true
+        this.add(req)
+        return this
+    }
+
+    /**
      * Limits the range of blocks to be processed.
      *
      * When the upper bound is specified,

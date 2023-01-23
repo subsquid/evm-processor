@@ -36,6 +36,7 @@ export interface DataBatch<R> {
     blocks: BlockData[]
     fetchStartTime: bigint
     fetchEndTime: bigint
+    isHead: boolean
 }
 
 export interface IngestOptions<R> {
@@ -119,12 +120,20 @@ export class Ingest<R extends BatchRequest> {
                         this.batches.shift()
                     }
 
+                    // When we are on the head, always include the head block,
+                    // even if it doesn't contain requested data.
+                    let isHead = to == response.archiveHeight
+                    if (isHead && !blocks.find((b) => b.header.height === response.archiveHeight)) {
+                        blocks.push(mapGatewayBlock(await this.fetchBlockHeader(to)))
+                    }
+
                     return {
                         blocks,
                         range: {from, to},
                         request: batch.request,
                         fetchStartTime,
                         fetchEndTime,
+                        isHead,
                     }
                 })
                 .catch(withErrorContext(ctx))
@@ -162,14 +171,36 @@ export class Ingest<R extends BatchRequest> {
             fieldSelection: toGatewayFieldSelection(t.data),
         }))
 
+        let includeAllBlocks = req.getIncludeAllBlocks()
+
         let args: gw.BatchRequest = {
             fromBlock: from,
             toBlock: to,
             logs,
             transactions,
+            includeAllBlocks,
         }
 
         return JSON.stringify(args)
+    }
+
+    private async fetchBlockHeader(height: number): Promise<gw.BatchBlock> {
+        let args: gw.BatchRequest = {
+            fromBlock: height,
+            toBlock: height,
+            logs: [{address: [], topics: [], fieldSelection: {block: DEFAULT_REQUEST.block}}],
+            transactions: [],
+            includeAllBlocks: true,
+        }
+
+        let response: {batch: gw.QueryResponse} = await this.options.archive.request({
+            path: '/query',
+            query: JSON.stringify(args),
+            method: 'POST',
+        })
+        assert(response.batch.data.length == 1)
+
+        return response.batch.data[0][0]
     }
 
     private async waitForHeight(minimumHeight: number): Promise<number> {

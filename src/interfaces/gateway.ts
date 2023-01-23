@@ -12,6 +12,7 @@ export interface BatchRequest {
     toBlock?: number
     logs: LogRequest[]
     transactions: TransactionRequest[]
+    includeAllBlocks: boolean
 }
 
 export interface LogRequest {
@@ -116,7 +117,7 @@ export const FULL_SELECTION = {
         gasUsed: true,
         timestamp: true,
         mixHash: true,
-        baseFeePerGas: true
+        baseFeePerGas: true,
     },
     log: {
         address: true,

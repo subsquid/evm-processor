@@ -9,7 +9,7 @@ type LogReq = {
 
 type TransactionReq = {
     address: string[] | null
-    sighash?: string
+    sighash?: string[]
     data?: TransactionDataRequest
 }
 

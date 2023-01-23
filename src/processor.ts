@@ -1,25 +1,25 @@
 import {Logger, createLogger} from '@subsquid/logger'
-import {runProgram, last, def, wait} from '@subsquid/util-internal'
-import {Batch, mergeBatches, applyRangeBound, getBlocksCount} from './batch/generic'
-import {PlainBatchRequest, BatchRequest} from './batch/request'
+import {def, last, runProgram, wait} from '@subsquid/util-internal'
+import {Batch, applyRangeBound, getBlocksCount, mergeBatches} from './batch/generic'
+import {BatchRequest, PlainBatchRequest} from './batch/request'
 import {Chain} from './chain'
 import {BlockData, Ingest} from './ingest'
 import {BatchHandlerContext, LogOptions, TransactionOptions} from './interfaces/dataHandlers'
 import {
-    LogItem,
-    TransactionItem,
-    NoDataSelection,
     AddLogItem,
-    LogDataRequest,
-    DataSelection,
-    MayBeDataSelection,
     AddTransactionItem,
+    DataSelection,
+    LogDataRequest,
+    LogItem,
+    MayBeDataSelection,
+    NoDataSelection,
     TransactionDataRequest,
+    TransactionItem,
 } from './interfaces/dataSelection'
 import {Database} from './interfaces/db'
 import {Metrics} from './metrics'
 import {JSONClient, Request} from './util/json'
-import {withErrorContext, timeInterval} from './util/misc'
+import {timeInterval, withErrorContext} from './util/misc'
 import {Range} from './util/range'
 import {RpcClient} from './util/rpc'
 
@@ -174,12 +174,6 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
         return this
     }
 
-    setDataBase(src: DataSource): this {
-        this.assertNotRunning()
-        this.src = src
-        return this
-    }
-
     private assertNotRunning(): void {
         if (this.running) {
             throw new Error('Settings modifications are not allowed after start of processing')
@@ -227,6 +221,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
 
                 let heightAtStart = await db.connect()
                 if (heightAtStart >= 0) {
+                    this.lastBlock = heightAtStart
                     log.info(`last processed block was ${heightAtStart}`)
                 }
 

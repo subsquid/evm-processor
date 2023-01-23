@@ -40,6 +40,7 @@ export interface EvmTransaction {
     maxPriorityFeePerGas?: bigint
     maxFeePerGas?: bigint
     yParity?: number
+    status?: number
 }
 
 export interface EvmLog {
@@ -47,7 +48,7 @@ export interface EvmLog {
     address: string
     data: string
     index: number
-    removed: boolean
+    removed?: boolean
     topics: string[]
     transactionIndex: number
 }

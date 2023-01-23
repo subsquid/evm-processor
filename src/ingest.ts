@@ -1,13 +1,13 @@
-import {assertNotNull, def, last, wait} from '@subsquid/util-internal'
 import assert from 'assert'
+import {assertNotNull, def, last, unexpectedCase, wait} from '@subsquid/util-internal'
 import type {Batch} from './batch/generic'
 import {BatchRequest} from './batch/request'
-import * as gw from './interfaces/gateway'
+import {DEFAULT_REQUEST} from './interfaces/dataSelection'
 import {EvmBlock, EvmLog, EvmTransaction} from './interfaces/evm'
+import * as gw from './interfaces/gateway'
+import {JSONClient} from './util/json'
 import {addErrorContext, withErrorContext} from './util/misc'
 import {Range, rangeEnd} from './util/range'
-import {DEFAULT_REQUEST} from './interfaces/dataSelection'
-import {JSONClient} from './util/json'
 
 export type Item =
     | {
@@ -232,8 +232,18 @@ function tryMapGatewayBlock(block: gw.BatchBlock): BlockData {
 }
 
 function mapGatewayBlock(block: gw.BatchBlock): BlockData {
-    let {timestamp, number: height, nonce, size, gasLimit, gasUsed, baseFeePerGas, hash: maybeHash, ...hdr} = block.block
-    let hash = assertNotNull(maybeHash)
+    let {
+        timestamp,
+        number: height,
+        nonce,
+        size,
+        gasLimit,
+        gasUsed,
+        baseFeePerGas,
+        hash: maybeHash,
+        ...hdr
+    } = block.block
+    let hash = assertNotNull(maybeHash) // for some reason hash is optional type in archive, but it was said that should be invalid behaviour
 
     let logs = createObjects<gw.Log, EvmLog>(block.logs, (go) => {
         let log = go
@@ -287,18 +297,15 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             return a.evmLog.index - b.evmLog.index
         } else if (a.kind === 'transaction' && b.kind === 'transaction') {
             return a.transaction.index - b.transaction.index
+        } else if (a.kind === 'evmLog' && b.kind === 'transaction') {
+            return a.evmLog.transactionIndex - b.transaction.index || -1 // transaction after logs
+        } else if (a.kind === 'transaction' && b.kind === 'evmLog') {
+            return a.transaction.index - b.evmLog.transactionIndex || 1
         } else {
-            if (a.kind === 'evmLog' && b.kind === 'transaction') {
-                return a.evmLog.transactionIndex - b.transaction.index || -1
-            } else if (a.kind === 'transaction' && b.kind === 'evmLog') {
-                return a.transaction.index - b.evmLog.transactionIndex || 1
-            } else {
-                throw new Error('Unexpected case')
-            }
+            throw unexpectedCase()
         }
     })
 
-    
     return {
         header: {
             id: `${height}-${hash.slice(3, 7)}`,
@@ -309,7 +316,7 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
             size: BigInt(size),
             gasLimit: BigInt(gasLimit),
             gasUsed: BigInt(gasUsed),
-            baseFeePerGas: baseFeePerGas? BigInt(baseFeePerGas): undefined,
+            baseFeePerGas: baseFeePerGas ? BigInt(baseFeePerGas) : undefined,
             ...hdr,
         },
         items,

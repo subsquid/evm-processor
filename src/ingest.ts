@@ -308,7 +308,7 @@ function mapGatewayBlock(block: gw.BatchBlock): BlockData {
 
     return {
         header: {
-            id: `${height}-${hash.slice(3, 7)}`,
+            id: createId(height, hash),
             hash,
             height,
             timestamp: Number(timestamp) * 1000,
@@ -333,11 +333,9 @@ function createObjects<S, T extends {index: number}>(src: S[], f: (s: S) => Part
 }
 
 function createId(height: number, hash: string, index?: number) {
-    if (index == null) {
-        return `${height}-${hash.slice(3, 11)}`
-    } else {
-        return `${height}-${index}-${hash.slice(3, 11)}`
-    }
+    return `${height.toString().padStart(10, '0')}${
+        index != null ? `-${index.toString().padStart(6, '0')}` : ``
+    }-${hash.slice(2, 7)}`
 }
 
 type PartialObj<T> = Partial<T> & {index: number}

@@ -124,7 +124,7 @@ export class Ingest<R extends BatchRequest> {
                     // even if it doesn't contain requested data.
                     let isHead = to == response.archiveHeight
                     if (isHead && !blocks.find((b) => b.header.height === response.archiveHeight)) {
-                        blocks.push(mapGatewayBlock(await this.fetchBlockHeader(to)))
+                        blocks.push(await this.fetchBlockHeader(to).then(mapGatewayBlock))
                     }
 
                     return {
@@ -193,14 +193,17 @@ export class Ingest<R extends BatchRequest> {
             includeAllBlocks: true,
         }
 
-        let response: {batch: gw.QueryResponse} = await this.options.archive.request({
+        let response: gw.QueryResponse = await this.options.archive.request({
             path: '/query',
             query: JSON.stringify(args),
             method: 'POST',
         })
-        assert(response.batch.data.length == 1)
+        let blocks = response.data.flat()
+        assert(blocks.length == 1)
 
-        return response.batch.data[0][0]
+        blocks[0].logs = [] // since we can't query data without logs or transactions, so we need to reset logs field
+
+        return blocks[0]
     }
 
     private async waitForHeight(minimumHeight: number): Promise<number> {

@@ -71,6 +71,12 @@ export interface TransactionOptions extends BlockRangeOption {
 
 export interface BatchHandlerContext<Store, Item> extends CommonHandlerContext<Store> {
     blocks: BatchBlock<Item>[]
+    /**
+     * Signals, that the processor reached the head of a chain.
+     *
+     * The head block is always included in `.blocks`.
+     */
+    isHead: boolean
 }
 
 export interface BatchBlock<Item> {

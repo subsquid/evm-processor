@@ -417,6 +417,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
             let log = this.getLogger()
             let mappingStartTime = process.hrtime.bigint()
             let blocks = batch.blocks
+            let isHead = batch.isHead
 
             if (batch.blocks.length != 0) {
                 let from = Number(blocks[0].header.height)
@@ -427,12 +428,13 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
                         log,
                         store,
                         blocks: blocks as any,
+                        isHead,
                     })
                 })
             }
 
             this.lastBlock = batch.range.to
-            await db.advance(this.lastBlock)
+            await db.advance(this.lastBlock, isHead)
 
             let mappingEndTime = process.hrtime.bigint()
 

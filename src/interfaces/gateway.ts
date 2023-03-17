@@ -16,13 +16,14 @@ export interface BatchRequest {
 }
 
 export interface LogRequest {
-    address: string[] | null
+    address: string[]
     topics: EvmTopicSet
     fieldSelection: FieldSelection
 }
 
 export interface TransactionRequest {
-    address: string[] | null
+    to: string[]
+    from?: string[]
     sighash?: string[]
     fieldSelection: FieldSelection
 }

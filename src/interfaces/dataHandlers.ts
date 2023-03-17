@@ -66,7 +66,14 @@ export interface LogOptions extends BlockRangeOption {
 export type EvmTopicSet = string[][]
 
 export interface TransactionOptions extends BlockRangeOption {
+    /**
+     * Sighash of the invoked contract method
+     */
     sighash?: string | string[]
+    /**
+     * Address of the tx author
+     */
+    from?: string | string[]
 }
 
 export interface BatchHandlerContext<Store, Item> extends CommonHandlerContext<Store> {

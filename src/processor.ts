@@ -116,7 +116,8 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
         this.assertNotRunning()
         let req = new PlainBatchRequest()
         req.transactions.push({
-            address: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
+            to: Array.isArray(contractAddress) ? contractAddress : [contractAddress],
+            from: options?.from == null || Array.isArray(options?.from) ? options?.from : [options.from],
             sighash: options?.sighash == null || Array.isArray(options?.sighash) ? options?.sighash : [options.sighash],
             data: options?.data,
         })
@@ -145,7 +146,7 @@ export class EvmBatchProcessor<Item extends {kind: string; address: string} = Lo
      * Optionally a range of blocks can be specified
      * for which the setting should be effective.
      */
-    includeAllBlocks(range?: Range): this {
+    includeAllBlocks(): this {
         this.assertNotRunning()
         let req = new PlainBatchRequest()
         req.includeAllBlocks = true

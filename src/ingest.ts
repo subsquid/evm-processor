@@ -166,7 +166,8 @@ export class Ingest<R extends BatchRequest> {
         }))
 
         let transactions = req.getTransactions().map((t) => ({
-            address: t.address,
+            to: t.to,
+            from: t.from,
             sighash: t.sighash,
             fieldSelection: toGatewayFieldSelection(t.data),
         }))

@@ -2,13 +2,14 @@ import {EvmTopicSet} from '../interfaces/dataHandlers'
 import {LogDataRequest, TransactionDataRequest} from '../interfaces/dataSelection'
 
 type LogReq = {
-    address: string[] | null
+    address: string[]
     topics?: EvmTopicSet
     data?: LogDataRequest
 }
 
 type TransactionReq = {
-    address: string[] | null
+    to: string[]
+    from?: string[]
     sighash?: string[]
     data?: TransactionDataRequest
 }
